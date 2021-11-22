@@ -1,8 +1,10 @@
+import React from 'react';
 import {Formik, Field, Form, ErrorMessage} from 'formik'
 import api from '../services/Api'
 import Schema from '../services/Schema'
 import FieldInput from '../../components/Field'
 import { useState } from 'react'
+
 
 const mascaraCpf = (value) =>{
     return value
@@ -13,27 +15,41 @@ const mascaraCpf = (value) =>{
     .replace(/(-\d{2})\d+?$/, '$1');
 }
 
-function Login(){
+function cleanLoginMask(value){
+    return value.replace(/[^0-9]/g, '');
+}
 
+function Login(){
+    
+    const [sucesso, setSucesso] = useState(false)
+    const [errosServidor, setErrorsServidor] = useState([])
+    
     const onSubmit = async (values, actions) => {
         try{
-            console.log(teste)
-             const result = await api.post("auth", values)
-            console.log(result)
-            
+            values.login = cleanLoginMask(loginMask)
+            const result = await api.post("auth", values)
+            const token = result.data.token
+            localStorage.setItem("token", token)
+            setSucesso(true)
         }catch(e){
-            console.log(e.request)
+            e.response.data.errors.map(msg =>{
+                errosServidor.push(msg)
+            })
+            // // errosServidor = e.response.data.errors
+             console.log(errosServidor)
         }
     }
-    const [teste, setTeste] = useState("");
+    const [loginMask, setLoginMask] = useState("");
+
     function handleMaskInput(e){
         e.target.value = mascaraCpf(e.target.value);
-        setTeste(e.target.value)
-
+        setLoginMask(e.target.value)
     }
 
     return ( 
+      
         <div>
+                 
             <Formik
             onSubmit={onSubmit}
             validationSchema={Schema}
@@ -45,21 +61,29 @@ function Login(){
                 }
             }>
             {(values, errors)=>(
-           
-                <Form>
-                    <div>
-                       
+                        
+                <Form>             
+                        <ErrorMessage name="login" />
+                        {!sucesso && 
+                            errosServidor.map(msgErrors=>{
+                                return (
+                                    <div>{msgErrors}</div>
+                                )
+                            })
+                        }
+                    <div>  
+                        <label>CPF*:</label>                  
                         <FieldInput 
                         name="login" 
                         type="text" 
                         onChange={handleMaskInput}
-                        value={teste}/>       
-                        <ErrorMessage name="login" />
+                        value={loginMask}
+                    />       
                     </div>
-                    <div>
-                        <label>Password:</label>
-                        <Field name="password" type="password"/>
                         <ErrorMessage name="password" />
+                    <div>
+                        <label>Password*:</label>
+                        <Field name="password" type="password"/>
                     </div>
                     <button type="submit">Acessar</button>
                 </Form>
